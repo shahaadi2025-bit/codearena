@@ -48,9 +48,18 @@ interface DbUser {
   username: string;
   email: string;
   rating: number;
+  wins: number;
+  matches_played: number;
 }
 
-const publicUser = (u: DbUser) => ({ id: u.id, username: u.username, email: u.email, rating: u.rating });
+const publicUser = (u: DbUser) => ({
+  id: u.id,
+  username: u.username,
+  email: u.email,
+  rating: u.rating,
+  wins: u.wins,
+  matchesPlayed: u.matches_played,
+});
 
 // Compared against when the email is unknown, so response time does not reveal which emails exist.
 const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', 10);
@@ -61,7 +70,7 @@ router.post('/signup', limiter, async (req, res, next) => {
     const passwordHash = await bcrypt.hash(password, 10);
     try {
       const { rows } = await query<DbUser>(
-        'insert into users (username, email, password_hash) values ($1, $2, $3) returning id, username, email, rating',
+        'insert into users (username, email, password_hash) values ($1, $2, $3) returning id, username, email, rating, wins, matches_played',
         [username, email, passwordHash],
       );
       const user = rows[0];
@@ -86,7 +95,7 @@ router.post('/login', limiter, async (req, res, next) => {
   try {
     const { email, password } = parse(loginSchema, req.body);
     const { rows } = await query<DbUser & { password_hash: string }>(
-      'select id, username, email, rating, password_hash from users where email = $1',
+      'select id, username, email, rating, wins, matches_played, password_hash from users where email = $1',
       [email],
     );
     const user = rows[0];
@@ -100,13 +109,13 @@ router.post('/login', limiter, async (req, res, next) => {
 
 router.get('/me', requireAuth, async (req, res, next) => {
   try {
-    const { rows } = await query<DbUser & { wins: number; matches_played: number }>(
+    const { rows } = await query<DbUser>(
       'select id, username, email, rating, wins, matches_played from users where id = $1',
       [req.user!.id],
     );
     const user = rows[0];
     if (!user) throw new HttpError(401, 'Your account no longer exists. Sign up again.');
-    res.json({ user: { ...publicUser(user), wins: user.wins, matchesPlayed: user.matches_played } });
+    res.json({ user: publicUser(user) });
   } catch (err) {
     next(err);
   }

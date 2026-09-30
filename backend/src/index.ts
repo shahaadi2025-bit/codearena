@@ -6,6 +6,8 @@ import { env } from './config/env';
 import { query } from './config/database';
 import { notFound, errorHandler } from './middleware/errorHandler';
 import authRoutes from './routes/auth';
+import matchRoutes from './routes/matches';
+import { initSockets } from './sockets/handlers';
 
 const app = express();
 app.set('trust proxy', 1); // Render sits behind a proxy; needed for correct client IPs in rate limiting
@@ -24,11 +26,13 @@ app.get('/health', async (_req, res, next) => {
 });
 
 app.use('/api/auth', authRoutes);
-// Next steps mount here: /api/users, /api/matches
+app.use('/api/matches', matchRoutes);
+// Next steps mount here: /api/users (leaderboard, profile)
 
 app.use(notFound);
 app.use(errorHandler);
 
-// http server (not app.listen) so Socket.io can attach to it in Step 4
+// http server (not app.listen) so Socket.io can share the same port
 export const server = http.createServer(app);
+initSockets(server);
 server.listen(env.port, () => console.log(`CodeArena API running on http://localhost:${env.port}`));

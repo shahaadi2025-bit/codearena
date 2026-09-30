@@ -2,18 +2,13 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 import Logo from "@/components/Logo";
-import { useAuth } from "@/context/AuthContext";
+import MatchmakingQueue from "@/components/MatchmakingQueue";
+import { useRequireAuth } from "@/lib/useRequireAuth";
 
-// Placeholder: replaced by the real dashboard (matchmaking + leaderboard) in later steps.
 export default function DashboardPage() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout } = useRequireAuth();
   const router = useRouter();
-
-  useEffect(() => {
-    if (!loading && !user) router.replace("/auth/login");
-  }, [loading, user, router]);
 
   if (loading || !user) {
     return <div className="grid min-h-screen place-items-center text-muted">Loading...</div>;
@@ -34,9 +29,26 @@ export default function DashboardPage() {
           </button>
         </div>
       </header>
-      <main className="py-16">
-        <h1 className="font-display text-3xl font-bold tracking-tight">Welcome, {user.username}</h1>
-        <p className="mt-4 max-w-md text-muted">You are signed in with a rating of {user.rating}. Matchmaking arrives next.</p>
+
+      <main className="grid gap-6 py-10 lg:grid-cols-[1.4fr_1fr]">
+        <MatchmakingQueue rating={user.rating} />
+        <section className="rounded-2xl border border-line bg-panel p-8">
+          <h2 className="font-display text-xl font-bold tracking-tight">Your record</h2>
+          <dl className="mt-6 grid grid-cols-3 gap-4">
+            <div>
+              <dt className="text-sm text-muted">Rating</dt>
+              <dd className="mt-1 font-mono text-2xl text-gold">{user.rating}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-muted">Matches</dt>
+              <dd className="mt-1 font-mono text-2xl">{user.matchesPlayed ?? 0}</dd>
+            </div>
+            <div>
+              <dt className="text-sm text-muted">Wins</dt>
+              <dd className="mt-1 font-mono text-2xl">{user.wins ?? 0}</dd>
+            </div>
+          </dl>
+        </section>
       </main>
     </div>
   );

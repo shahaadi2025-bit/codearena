@@ -10,7 +10,7 @@ Built as a full-stack and real-time portfolio project using only free tiers and 
 |---|---|
 | Monorepo, PostgreSQL schema, 53 seeded problems | Done |
 | Auth: signup, login, JWT sessions, protected routes | Done |
-| Matchmaking queue | Planned |
+| Matchmaking: Socket.io queue, rating-based pairing, match creation | Done |
 | Real-time match room (Socket.io, Monaco editor) | Planned |
 | Code execution via Judge0 | Planned |
 | Elo rating, leaderboard, profile | Planned |
@@ -81,6 +81,13 @@ On Windows you can start both servers at once with `powershell -ExecutionPolicy 
 | `npm run typecheck` | Type-check without emitting |
 | `npm run db:schema` | Create tables and indexes (safe to re-run) |
 | `npm run db:seed` | Insert problems (existing ones are skipped by slug) |
+| `npm run dev:bot` | Dev only: a practice player that joins the queue, so you can test matchmaking alone |
+
+## How matchmaking works
+
+Players connect over Socket.io with their JWT and join an in-memory queue. Two players are paired when their ratings are within a window that starts at 100 points and widens by 20 per second waited, so after 30 seconds anyone can be matched. The server then creates a `matches` row, picks a problem (harder for higher-rated pairs, never one either player saw in their last few matches), and sends `match:found` to both. The queue lives in memory, so a server restart empties it; clients re-join automatically when they reconnect.
+
+To test alone, start the practice opponent in a second terminal with `npm run dev:bot` from `backend`, then click **Find match** in the browser.
 
 ## Project structure
 
@@ -91,15 +98,18 @@ codearena/
 │       ├── index.ts              # Express server
 │       ├── config/               # env.ts, database.ts
 │       ├── middleware/           # auth.ts (JWT), errorHandler.ts
-│       ├── routes/               # auth.ts
+│       ├── routes/               # auth.ts, matches.ts
+│       ├── services/             # matchmaking.ts (queue and pairing)
+│       ├── sockets/              # handlers.ts (Socket.io, JWT handshake)
 │       ├── db/                   # schema.sql, seed.sql, migrate.ts
 │       └── types/                # Express request typing
+├── backend/scripts/dev-bot.ts    # practice opponent for solo testing
 ├── frontend/
 │   └── src/
-│       ├── app/                  # pages: landing, auth/login, auth/signup, dashboard
-│       ├── components/           # Logo, DuelDemo, AuthShell, Field
+│       ├── app/                  # pages: landing, auth/*, dashboard, match/[id]
+│       ├── components/           # Logo, DuelDemo, AuthShell, Field, MatchmakingQueue, ProblemStatement
 │       ├── context/              # AuthContext
-│       └── lib/                  # api.ts
+│       └── lib/                  # api.ts, socket.ts, types.ts, useRequireAuth.ts
 ├── tools/gen_problems.py         # generates backend/src/db/seed.sql
 └── dev.ps1                       # start both servers on Windows
 ```

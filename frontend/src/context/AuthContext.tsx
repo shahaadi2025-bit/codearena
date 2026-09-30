@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api, ApiError, getToken, setToken } from "@/lib/api";
+import { disconnectSocket } from "@/lib/socket";
 
 export type User = {
   id: string;
@@ -63,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    disconnectSocket();
     setToken(null);
     setUser(null);
   }, []);
